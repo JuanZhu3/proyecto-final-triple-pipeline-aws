@@ -1,0 +1,14 @@
+# gh run list (17-11-2026)
+completed	success	Pipeline 3 - Despliegue (ECS)	Pipeline 3 - Despliegue (ECS)	main	workflow_run	44116951342	4m42s	2026-11-17T15:40:05Z
+completed	success	Pipeline 2 - Construcción y publicación (ECR)	Pipeline 2 - Construcción y publicación (ECR)	main	workflow_dispatch	44116100569	4m27s	2026-11-17T15:35:34Z
+completed	success	Pipeline 1 - Infraestructura (Terraform)	Pipeline 1 - Infraestructura (Terraform)	main	workflow_dispatch	44115268398	3m31s	2026-11-17T15:31:17Z
+completed	success	Revisión final: acciones Node 24, escaneo ECR, seguridad y README	Pipeline 2 - Construcción y publicación (ECR)	revision-final	pull_request	44023359911	12s	2026-11-17T05:20:04Z
+completed	success	Pipeline 1 - Infraestructura (Terraform)	Pipeline 1 - Infraestructura (Terraform)	revision-final	workflow_dispatch	44023358647	51s	2026-11-17T05:20:03Z
+completed	success	Pipeline 1 - Infraestructura (Terraform)	Pipeline 1 - Infraestructura (Terraform)	main	workflow_dispatch	44021840865	3m46s	2026-11-17T05:07:22Z
+completed	success	Pipeline 3 - Despliegue (ECS)	Pipeline 3 - Despliegue (ECS)	main	workflow_run	44020646109	5m34s	2026-11-17T04:57:02Z
+completed	success	Pipeline 2: publicar manifiesto simple para que ECR escanee las imagenes	Pipeline 2 - Construcción y publicación (ECR)	main	push	44020571313	40s	2026-11-17T04:56:20Z
+completed	success	Pipeline 3 - Despliegue (ECS)	Pipeline 3 - Despliegue (ECS)	main	workflow_run	44019816197	5m55s	2026-11-17T04:49:28Z
+completed	success	Frontend: corregir el ancho de las casillas de la lista	Pipeline 2 - Construcción y publicación (ECR)	main	push	44019733600	41s	2026-11-17T04:48:44Z
+completed	success	Pipeline 3 - Despliegue (ECS)	Pipeline 3 - Despliegue (ECS)	main	workflow_run	44019159656	4m20s	2026-11-17T04:43:42Z
+completed	success	Aplicacion y pipelines 2 (construccion) y 3 (despliegue)	Pipeline 2 - Construcción y publicación (ECR)	main	push	44019068742	45s	2026-11-17T04:42:54Z
+completed	success	Pipeline 1: infraestructura con Terraform	Pipeline 1 - Infraestructura (Terraform)	main	push	44018573651	3m57s	2026-11-17T04:38:27Z

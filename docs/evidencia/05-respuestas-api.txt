@@ -1,0 +1,8 @@
+# GET http://proyecto-final-alb-1938453865.us-east-2.elb.amazonaws.com/api/health
+{"estado":"ok","servicio":"backend","version":"d0a5ae6","uptimeSegundos":2665,"tareas":0}
+# GET http://proyecto-final-alb-1938453865.us-east-2.elb.amazonaws.com/version.json
+{
+  "version": "d0a5ae6",
+  "construido": "2026-11-17T15:36:07.978Z"
+}# GET http://proyecto-final-alb-1938453865.us-east-2.elb.amazonaws.com/api/tareas
+[]

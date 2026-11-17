@@ -1,9 +1,14 @@
 # Pipelines
 
-Los tres pipelines se ejecutan en **GitHub Actions**. Las definiciones están en
-[`.github/workflows/`](../.github/workflows) (GitHub solo las lee de esa ruta) y
-la lógica en los scripts de [`scripts/`](scripts), que también se pueden ejecutar
-en local con credenciales de AWS.
+Los tres pipelines se ejecutan en **GitHub Actions**. Esta carpeta contiene:
+
+- [`workflows/`](workflows): **copia** de las definiciones de los tres pipelines.
+  GitHub solo ejecuta los archivos de [`.github/workflows/`](../.github/workflows),
+  que son la fuente original; la copia está aquí para que la carpeta `pipelines/`
+  tenga las definiciones completas. Para sincronizarla:
+  `cp .github/workflows/*.yml pipelines/workflows/`
+- [`scripts/`](scripts): la lógica de cada pipeline, que también se puede
+  ejecutar en local con credenciales de AWS.
 
 | Pipeline | Workflow | Disparador | Qué hace |
 |---|---|---|---|

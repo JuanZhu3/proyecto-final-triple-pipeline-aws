@@ -8,9 +8,9 @@ construye y despliega en **Amazon ECS Fargate** mediante tres pipelines de
 
 | Carpeta | Contenido |
 |---|---|
-| [`terraform/`](terraform) | Infraestructura como código: VPC, security groups, ECR, ALB, ECS Fargate. [`terraform/bootstrap/`](terraform/bootstrap): estado remoto y credenciales de CI |
+| [`terraform/`](terraform) | Infraestructura como código: VPC, security groups, ECR, ALB, ECS Fargate. Instrucciones en [`terraform/README.md`](terraform/README.md). [`terraform/bootstrap/`](terraform/bootstrap): estado remoto y credenciales de CI |
 | [`aplicacion/`](aplicacion) | [`frontend/`](aplicacion/frontend) (HTML/JS + nginx), [`backend/`](aplicacion/backend) (Node.js/Express + pruebas), Dockerfiles y `docker-compose.yml` para local |
-| [`pipelines/`](pipelines) | Scripts de los tres pipelines y su documentación ([`pipelines/README.md`](pipelines/README.md)) |
+| [`pipelines/`](pipelines) | Definiciones de los tres pipelines ([`pipelines/workflows/`](pipelines/workflows), copia de `.github/workflows/`), sus scripts y documentación ([`pipelines/README.md`](pipelines/README.md)) |
 | [`.github/workflows/`](.github/workflows) | Definiciones de los pipelines 1, 2 y 3 en GitHub Actions |
 
 ## Arquitectura
@@ -128,24 +128,30 @@ IPv4 públicas (~0.50 USD/día) ≈ **1.6 USD/día** mientras está desplegado.
 
 ## Demo
 
-**Estado actual:** la infraestructura se **destruyó** tras la verificación para no
-consumir créditos (el bootstrap se conserva). Antes de la demo se recrea con los
-pasos 3 y 4 de [Reproducción](#reproducción) (~10 min). El nombre DNS del ALB
-cambia en cada creación; la URL nueva aparece en el resumen de los pipelines 1 y 3.
+**Estado actual (17-11-2026):** la infraestructura está **desplegada** y la
+aplicación responde en
+<http://proyecto-final-alb-1938453865.us-east-2.elb.amazonaws.com> (versión
+`d0a5ae6`). Si se destruye y se vuelve a crear con los pasos 3 y 4 de
+[Reproducción](#reproducción) (~10 min), el nombre DNS del ALB cambia; la URL
+nueva aparece en el resumen de los pipelines 1 y 3.
 
 **Evidencia:** historial de ejecuciones en la pestaña
-[Actions](https://github.com/JuanZhu3/proyecto-final-triple-pipeline-aws/actions) del repositorio.
-Primera ejecución completa (17-11-2026):
+[Actions](https://github.com/JuanZhu3/proyecto-final-triple-pipeline-aws/actions)
+del repositorio (privado: el profesor necesita acceso de lectura) y capturas en
+[`docs/evidencia/`](docs/evidencia).
 
-| Pipeline | Resultado |
-|---|---|
-| 1 · Infraestructura | `terraform apply`: 33 recursos creados en ~4 min |
-| 2 · Construcción | pruebas OK, imágenes `frontend` y `backend` publicadas en ECR con etiqueta = SHA del commit |
-| 3 · Despliegue | ambos servicios estables en ECS, prueba de humo OK (versión verificada en `/version.json` y `/api/health`) |
+Despliegue completo actual (17-11-2026):
 
-Un cambio posterior en el CSS del frontend recorrió de forma automática
-Pipeline 2 → Pipeline 3 y quedó en producción sin pasos manuales. Después,
-`destroy` del Pipeline 1 eliminó los 33 recursos.
+| Pipeline | Ejecución | Resultado |
+|---|---|---|
+| 1 · Infraestructura | [44115268398](https://github.com/JuanZhu3/proyecto-final-triple-pipeline-aws/actions/runs/44115268398) | `terraform apply`: 33 recursos creados en ~3.5 min |
+| 2 · Construcción | [44116100569](https://github.com/JuanZhu3/proyecto-final-triple-pipeline-aws/actions/runs/44116100569) | pruebas OK, imágenes `frontend` y `backend` publicadas en ECR con etiqueta `d0a5ae6` (SHA del commit) |
+| 3 · Despliegue | [44116951342](https://github.com/JuanZhu3/proyecto-final-triple-pipeline-aws/actions/runs/44116951342) | ambos servicios estables en ECS, prueba de humo OK (versión verificada en `/version.json` y `/api/health`) |
+
+Antes, un cambio en el CSS del frontend recorrió de forma automática
+Pipeline 2 → Pipeline 3 (disparado por `push`) y quedó en producción sin pasos
+manuales, y el `destroy` del Pipeline 1 eliminó y luego volvió a crear los 33
+recursos.
 
 ### Guion sugerido para la demo en vivo (~10 min)
 
