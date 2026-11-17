@@ -28,25 +28,35 @@ jobs:
   desplegar:
     name: Desplegar y verificar
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Determinar la etiqueta a desplegar
         id: etiqueta
+        env:
+          # Las entradas se pasan por variables de entorno (no interpoladas en el
+          # script) para evitar inyección de comandos.
+          EVENTO: ${{ github.event_name }}
+          SHA_ORIGEN: ${{ github.event.workflow_run.head_sha }}
+          ETIQUETA_MANUAL: ${{ github.event.inputs.etiqueta }}
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            SHA="${{ github.event.workflow_run.head_sha }}"
-            echo "valor=${SHA::7}" >> "$GITHUB_OUTPUT"
+          if [[ "$EVENTO" == "workflow_run" ]]; then
+            ETIQUETA="${SHA_ORIGEN::7}"
           else
-            echo "valor=${{ github.event.inputs.etiqueta }}" >> "$GITHUB_OUTPUT"
+            ETIQUETA="$ETIQUETA_MANUAL"
           fi
+          if [[ -n "$ETIQUETA" && ! "$ETIQUETA" =~ ^[A-Za-z0-9._-]{1,128}$ ]]; then
+            echo "::error::Etiqueta inválida: solo letras, números, '.', '_' y '-'."
+            exit 1
+          fi
+          echo "valor=$ETIQUETA" >> "$GITHUB_OUTPUT"
 
       - name: Credenciales AWS (rol app, temporales)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -57,8 +67,9 @@ jobs:
 
       - name: Resolver etiqueta (si se pidió la más reciente)
         id: resuelta
+        env:
+          ETIQUETA: ${{ steps.etiqueta.outputs.valor }}
         run: |
-          ETIQUETA="${{ steps.etiqueta.outputs.valor }}"
           if [[ -z "$ETIQUETA" ]]; then
             ETIQUETA="$(aws ecr describe-images --repository-name proyecto-final/backend --filter tagStatus=TAGGED \
               --query 'sort_by(imageDetails,&imagePushedAt)[-1].imageTags[0]' --output text)"

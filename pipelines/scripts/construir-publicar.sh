@@ -50,13 +50,26 @@ DIGEST="$(aws ecr describe-images --repository-name "$REPO" --image-ids imageTag
 log "Publicada: $REPO:$ETIQUETA ($DIGEST)"
 
 # Resultado del escaneo de vulnerabilidades (informativo, no bloquea).
-log "Esperando el escaneo de vulnerabilidades de ECR..."
-if aws ecr wait image-scan-complete --repository-name "$REPO" --image-id imageTag="$ETIQUETA" 2>/dev/null; then
+# No se usa `aws ecr wait image-scan-complete`: justo después del push el
+# escaneo aún no existe (ScanNotFoundException) y el waiter aborta al instante.
+log "Esperando el escaneo de vulnerabilidades de ECR (máx. 3 min)..."
+ESTADO_ESCANEO="PENDIENTE"
+for _ in $(seq 1 36); do
+  ESTADO_ESCANEO="$(aws ecr describe-image-scan-findings --repository-name "$REPO" --image-id imageTag="$ETIQUETA" \
+    --query 'imageScanStatus.status' --output text 2>/dev/null || echo PENDIENTE)"
+  case "$ESTADO_ESCANEO" in
+    COMPLETE|ACTIVE|FAILED|UNSUPPORTED_IMAGE|FINDINGS_UNAVAILABLE) break ;;
+  esac
+  sleep 5
+done
+
+if [[ "$ESTADO_ESCANEO" == "COMPLETE" || "$ESTADO_ESCANEO" == "ACTIVE" ]]; then
   HALLAZGOS="$(aws ecr describe-image-scan-findings --repository-name "$REPO" --image-id imageTag="$ETIQUETA" \
     --query 'imageScanFindings.findingSeverityCounts' --output json)"
-  log "Hallazgos del escaneo: $HALLAZGOS"
+  [[ "$HALLAZGOS" == "null" ]] && HALLAZGOS="{}"
 else
-  HALLAZGOS="(escaneo no disponible)"
+  HALLAZGOS="(escaneo no disponible: $ESTADO_ESCANEO)"
 fi
+log "Hallazgos del escaneo: $HALLAZGOS"
 
 resumen "- \`$COMPONENTE\`: \`$REPO:$ETIQUETA\` publicada · digest \`${DIGEST:0:19}…\` · escaneo: \`$(echo "$HALLAZGOS" | tr -d '\n ')\`"

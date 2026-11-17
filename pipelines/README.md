@@ -46,7 +46,9 @@ en local con credenciales de AWS.
 - **Pipeline 2**: si fallan las pruebas no se construye ninguna imagen. Las
   etiquetas de ECR son inmutables, así que un reintento no sobrescribe imágenes.
   Si el repositorio ECR no existe, el error indica ejecutar el Pipeline 1.
-- **Pipeline 3**: solo corre si el Pipeline 2 terminó con éxito. Verifica que la
+- **Pipeline 3**: solo corre si el Pipeline 2 terminó con éxito. La etiqueta
+  manual se valida (`[A-Za-z0-9._-]`) y las entradas llegan al script por
+  variables de entorno, no interpoladas, para evitar inyección de comandos. Verifica que la
   imagen exista antes de desplegar. ECS tiene *deployment circuit breaker* con
   rollback: si las tareas nuevas no pasan el health check del ALB, ECS vuelve
   sola a la revisión anterior y el script lo detecta y falla mostrando los
