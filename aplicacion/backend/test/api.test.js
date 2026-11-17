@@ -54,6 +54,9 @@ test("Validación de entrada", () =>
     res = await fetch(`${base}/api/tareas`, { method: "POST", headers: json, body: "{malo" });
     assert.strictEqual(res.status, 400);
 
+    res = await fetch(`${base}/api/tareas`, { method: "POST", headers: json, body: JSON.stringify({ titulo: "x".repeat(20000) }) });
+    assert.strictEqual(res.status, 413);
+
     res = await fetch(`${base}/api/no-existe`);
     assert.strictEqual(res.status, 404);
   }));

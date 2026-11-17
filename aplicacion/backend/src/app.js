@@ -72,6 +72,8 @@ function createApp({ version = process.env.APP_VERSION || "local" } = {}) {
   // Manejo centralizado de errores (JSON mal formado, etc.).
   app.use((err, req, res, next) => {
     if (err.type === "entity.parse.failed") return res.status(400).json({ error: "JSON inválido." });
+    if (err.type === "entity.too.large") return res.status(413).json({ error: "Cuerpo de la petición demasiado grande." });
+    if (err.status >= 400 && err.status < 500) return res.status(err.status).json({ error: "Petición inválida." });
     console.error(err);
     res.status(500).json({ error: "Error interno del servidor." });
   });

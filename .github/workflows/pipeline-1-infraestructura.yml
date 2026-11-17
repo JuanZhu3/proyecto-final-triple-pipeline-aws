@@ -45,10 +45,10 @@ defaults:
 jobs:
   validar:
     name: Validar (fmt + validate)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ env.TF_VERSION }}
       - name: terraform fmt
@@ -62,10 +62,10 @@ jobs:
     name: ${{ github.event.inputs.accion || 'apply' }}
     needs: validar
     if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Verificar confirmación de destroy
         if: github.event.inputs.accion == 'destroy' && github.event.inputs.confirmar_destroy != 'DESTRUIR'
@@ -74,7 +74,7 @@ jobs:
           exit 1
 
       - name: Credenciales AWS (rol infra, temporales)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -83,7 +83,7 @@ jobs:
           role-session-name: pipeline1-${{ github.run_id }}
           role-duration-seconds: 3600
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false

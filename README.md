@@ -79,14 +79,15 @@ Detalle de manejo de errores por pipeline en [`pipelines/README.md`](pipelines/R
 
 ## Reproducción
 
-1. **Bootstrap (una sola vez, en local):** crea el bucket del estado, el usuario de CI y los roles.
+1. **Bootstrap (una sola vez, en local):** crea el bucket del estado, el usuario de CI y los roles. Use el perfil de AWS CLI con el que inició sesión (aquí `proyecto-final`).
    ```bash
-   cd terraform/bootstrap
-   terraform init
-   terraform apply
-   cd ../..
+   export AWS_PROFILE=proyecto-final
    ```
-2. **Credenciales de CI:** crea la clave del usuario de CI y la guarda en GitHub Secrets, junto con las variables del repositorio.
+   ```bash
+   cd terraform/bootstrap && terraform init && terraform apply && cd ../..
+   ```
+   > El estado del bootstrap (`terraform/bootstrap/terraform.tfstate`) queda **solo en local** (está en `.gitignore`). Consérvelo: sin él, Terraform no puede actualizar ni borrar esos recursos.
+2. **Credenciales de CI:** crea la clave del usuario de CI y la guarda en GitHub Secrets, junto con las variables del repositorio. Volver a ejecutarlo **rota** la clave.
    ```bash
    bash pipelines/scripts/crear-clave-ci.sh
    ```
@@ -127,8 +128,10 @@ IPv4 públicas (~0.50 USD/día) ≈ **1.6 USD/día** mientras está desplegado.
 
 ## Demo
 
-**Aplicación desplegada:** http://proyecto-final-alb-1627667169.us-east-2.elb.amazonaws.com
-(disponible mientras la infraestructura no se destruya).
+**Estado actual:** la infraestructura se **destruyó** tras la verificación para no
+consumir créditos (el bootstrap se conserva). Antes de la demo se recrea con los
+pasos 3 y 4 de [Reproducción](#reproducción) (~10 min). El nombre DNS del ALB
+cambia en cada creación; la URL nueva aparece en el resumen de los pipelines 1 y 3.
 
 **Evidencia:** historial de ejecuciones en la pestaña
 [Actions](https://github.com/JuanZhu3/proyecto-final-triple-pipeline-aws/actions) del repositorio.
@@ -141,7 +144,8 @@ Primera ejecución completa (17-11-2026):
 | 3 · Despliegue | ambos servicios estables en ECS, prueba de humo OK (versión verificada en `/version.json` y `/api/health`) |
 
 Un cambio posterior en el CSS del frontend recorrió de forma automática
-Pipeline 2 → Pipeline 3 y quedó en producción sin pasos manuales.
+Pipeline 2 → Pipeline 3 y quedó en producción sin pasos manuales. Después,
+`destroy` del Pipeline 1 eliminó los 33 recursos.
 
 ### Guion sugerido para la demo en vivo (~10 min)
 

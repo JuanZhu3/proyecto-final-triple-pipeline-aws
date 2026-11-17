@@ -75,11 +75,17 @@ async function comprobarEstado() {
 
 $("form-nueva").addEventListener("submit", (ev) => {
   ev.preventDefault();
-  const titulo = $("titulo").value.trim();
+  const campo = $("titulo");
+  const titulo = campo.value.trim();
   if (!titulo) return;
+  campo.value = ""; // se limpia antes de enviar para no borrar lo que se escriba mientras tanto
   accion(async () => {
-    await api("/tareas", { method: "POST", body: JSON.stringify({ titulo }) });
-    $("titulo").value = "";
+    try {
+      await api("/tareas", { method: "POST", body: JSON.stringify({ titulo }) });
+    } catch (e) {
+      if (!campo.value) campo.value = titulo; // si falla, se devuelve el texto al campo
+      throw e;
+    }
   });
 });
 
