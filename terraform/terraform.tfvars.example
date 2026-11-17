@@ -1,0 +1,8 @@
+# Copie este archivo a terraform.tfvars para cambiar valores por defecto.
+# (terraform.tfvars está en .gitignore)
+region               = "us-east-2"
+proyecto             = "proyecto-final"
+vpc_cidr             = "10.20.0.0/16"
+numero_zonas         = 2
+retencion_logs_dias  = 7
+imagenes_a_conservar = 10

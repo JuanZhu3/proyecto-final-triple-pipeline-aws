@@ -1,0 +1,129 @@
+# PIPELINE 1 - Infraestructura como código (Terraform)
+# Valida, planifica y aplica la infraestructura de terraform/ en AWS.
+#  - push a main que toque terraform/  -> validar + plan + apply
+#  - pull request                      -> solo validar (sin credenciales)
+#  - manual (workflow_dispatch)        -> plan, apply o destroy
+name: "Pipeline 1 - Infraestructura (Terraform)"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - "!terraform/bootstrap/**"
+      - ".github/workflows/pipeline-1-infraestructura.yml"
+  pull_request:
+    paths: ["terraform/**"]
+  workflow_dispatch:
+    inputs:
+      accion:
+        description: "Acción de Terraform"
+        type: choice
+        options: [plan, apply, destroy]
+        default: plan
+      confirmar_destroy:
+        description: "Para destroy, escriba DESTRUIR"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-estado # nunca dos ejecuciones sobre el mismo estado
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  TF_VERSION: "~1.17.0"
+
+defaults:
+  run:
+    working-directory: terraform
+
+jobs:
+  validar:
+    name: Validar (fmt + validate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff
+      - name: terraform validate
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+  plan-apply:
+    name: ${{ github.event.inputs.accion || 'apply' }}
+    needs: validar
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar confirmación de destroy
+        if: github.event.inputs.accion == 'destroy' && github.event.inputs.confirmar_destroy != 'DESTRUIR'
+        run: |
+          echo "::error::Para destruir la infraestructura escriba DESTRUIR en 'confirmar_destroy'."
+          exit 1
+
+      - name: Credenciales AWS (rol infra, temporales)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_INFRA_ARN }}
+          role-session-name: pipeline1-${{ github.run_id }}
+          role-duration-seconds: 3600
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: terraform init (estado remoto en S3)
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=infra/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}"
+
+      - name: terraform plan
+        id: plan
+        run: |
+          DESTROY_FLAG=""
+          [[ "${{ github.event.inputs.accion }}" == "destroy" ]] && DESTROY_FLAG="-destroy"
+          set +e
+          terraform plan $DESTROY_FLAG -var="region=${{ vars.AWS_REGION }}" -detailed-exitcode -out=tfplan
+          CODIGO=$?
+          set -e
+          # 0 = sin cambios, 2 = hay cambios, 1 = error
+          [[ $CODIGO -eq 1 ]] && exit 1
+          echo "cambios=$([[ $CODIGO -eq 2 ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Plan de Terraform"
+            echo '```'
+            terraform show -no-color tfplan | grep -E '^(Plan:|No changes|Changes to Outputs)' || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: terraform apply
+        if: steps.plan.outputs.cambios == 'true' && (github.event_name == 'push' || github.event.inputs.accion == 'apply' || github.event.inputs.accion == 'destroy')
+        run: terraform apply -auto-approve tfplan
+
+      - name: Salidas
+        if: github.event.inputs.accion != 'destroy'
+        run: |
+          terraform output
+          {
+            echo "### Infraestructura"
+            echo "- URL de la aplicación: $(terraform output -raw url_aplicacion 2>/dev/null || echo 'n/d')"
+            echo "- Cluster ECS: \`$(terraform output -raw cluster_ecs 2>/dev/null || echo 'n/d')\`"
+          } >> "$GITHUB_STEP_SUMMARY"

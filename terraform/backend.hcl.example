@@ -1,0 +1,7 @@
+# Configuración del backend S3 para ejecutar Terraform en local:
+#   cp backend.hcl.example backend.hcl   (y ajuste el bucket)
+#   terraform init -backend-config=backend.hcl
+# El nombre del bucket lo imprime `terraform output bucket_estado` en terraform/bootstrap.
+bucket = "proyecto-final-tfstate-<ID_CUENTA>-us-east-2"
+key    = "infra/terraform.tfstate"
+region = "us-east-2"
