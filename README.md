@@ -107,6 +107,21 @@ Detalle de manejo de errores por pipeline en [`pipelines/README.md`](pipelines/R
    aws elbv2 describe-load-balancers --names proyecto-final-alb --query "LoadBalancers[0].DNSName" --output text
    ```
 
+### Preparar otra computadora (p. ej. la de la presentación)
+
+Los pipelines corren en GitHub Actions, así que una computadora nueva solo
+necesita las herramientas y las sesiones de GitHub y AWS. Un script instala Git,
+GitHub CLI, AWS CLI, Terraform, Node.js y Docker, inicia sesión en GitHub y AWS
+(perfil `proyecto-final`), clona el repo, genera `terraform/backend.hcl` y
+verifica todo:
+
+- Windows (PowerShell): `powershell -ExecutionPolicy Bypass -File pipelines\scripts\preparar-computadora.ps1`
+- macOS / Linux con Homebrew: `bash pipelines/scripts/preparar-computadora.sh`
+
+> El estado del bootstrap (`terraform/bootstrap/terraform.tfstate`) no viaja con
+> el repositorio. Cópielo a mano desde la computadora original si necesita
+> modificar o destruir el bootstrap; para la demo no hace falta.
+
 ### Ejecutar en local
 
 ```bash
