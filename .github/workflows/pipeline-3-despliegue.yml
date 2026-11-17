@@ -1,0 +1,78 @@
+# PIPELINE 3 - Despliegue en ECS
+# Toma las imágenes publicadas en ECR, registra nuevas definiciones de tarea,
+# actualiza los servicios de ECS y verifica que la aplicación queda operativa.
+#  - Automático: cuando el Pipeline 2 termina con éxito en main (misma etiqueta).
+#  - Manual: con la etiqueta que se indique (vacío = la imagen más reciente).
+name: "Pipeline 3 - Despliegue (ECS)"
+
+on:
+  workflow_run:
+    workflows: ["Pipeline 2 - Construcción y publicación (ECR)"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      etiqueta:
+        description: "Etiqueta de imagen a desplegar (vacío = la más reciente en ECR)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: despliegue-ecs
+  cancel-in-progress: false
+
+jobs:
+  desplegar:
+    name: Desplegar y verificar
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determinar la etiqueta a desplegar
+        id: etiqueta
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            SHA="${{ github.event.workflow_run.head_sha }}"
+            echo "valor=${SHA::7}" >> "$GITHUB_OUTPUT"
+          else
+            echo "valor=${{ github.event.inputs.etiqueta }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Credenciales AWS (rol app, temporales)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_APP_ARN }}
+          role-session-name: pipeline3-${{ github.run_id }}
+          role-duration-seconds: 3600
+
+      - name: Resolver etiqueta (si se pidió la más reciente)
+        id: resuelta
+        run: |
+          ETIQUETA="${{ steps.etiqueta.outputs.valor }}"
+          if [[ -z "$ETIQUETA" ]]; then
+            ETIQUETA="$(aws ecr describe-images --repository-name proyecto-final/backend --filter tagStatus=TAGGED \
+              --query 'sort_by(imageDetails,&imagePushedAt)[-1].imageTags[0]' --output text)"
+          fi
+          echo "Etiqueta a desplegar: $ETIQUETA"
+          echo "valor=$ETIQUETA" >> "$GITHUB_OUTPUT"
+          echo "### Despliegue de la versión \`$ETIQUETA\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # El backend primero: así el frontend nuevo nunca llama a una API antigua.
+      - name: Desplegar backend
+        run: bash pipelines/scripts/desplegar.sh backend "${{ steps.resuelta.outputs.valor }}"
+
+      - name: Desplegar frontend
+        run: bash pipelines/scripts/desplegar.sh frontend "${{ steps.resuelta.outputs.valor }}"
+
+      - name: Prueba de humo (aplicación operativa)
+        run: bash pipelines/scripts/prueba-humo.sh "${{ steps.resuelta.outputs.valor }}"

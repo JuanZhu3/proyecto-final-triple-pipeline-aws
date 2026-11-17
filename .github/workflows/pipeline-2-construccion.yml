@@ -1,0 +1,75 @@
+# PIPELINE 2 - Construcción y publicación
+# Obtiene el código, ejecuta las pruebas, construye el frontend y el backend,
+# crea las imágenes Docker, las etiqueta con el SHA del commit y las publica en
+# Amazon ECR. Al terminar con éxito en main, dispara el Pipeline 3.
+name: "Pipeline 2 - Construcción y publicación (ECR)"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "aplicacion/**"
+      - "pipelines/scripts/construir-publicar.sh"
+      - ".github/workflows/pipeline-2-construccion.yml"
+  pull_request:
+    paths: ["aplicacion/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: construccion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruebas:
+    name: Pruebas y compilación
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: aplicacion/backend/package-lock.json
+      - name: Backend - instalar dependencias y pruebas
+        working-directory: aplicacion/backend
+        run: |
+          npm ci
+          npm test
+      - name: Frontend - compilar
+        working-directory: aplicacion/frontend
+        run: npm run build
+
+  publicar:
+    name: Imagen ${{ matrix.componente }}
+    needs: pruebas
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: true
+      matrix:
+        componente: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Etiqueta de la imagen (SHA corto del commit)
+        id: etiqueta
+        run: echo "valor=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Credenciales AWS (rol app, temporales)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_APP_ARN }}
+          role-session-name: pipeline2-${{ github.run_id }}
+          role-duration-seconds: 3600
+
+      - name: Construir, etiquetar y publicar en ECR
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+        run: bash pipelines/scripts/construir-publicar.sh "${{ matrix.componente }}" "${{ steps.etiqueta.outputs.valor }}"

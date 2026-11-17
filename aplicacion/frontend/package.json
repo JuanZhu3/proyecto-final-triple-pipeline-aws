@@ -1,0 +1,9 @@
+{
+  "name": "tareas-frontend",
+  "version": "1.0.0",
+  "description": "Frontend estático de la lista de tareas",
+  "private": true,
+  "scripts": {
+    "build": "node build.js"
+  }
+}
