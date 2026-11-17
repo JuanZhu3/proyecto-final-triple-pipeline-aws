@@ -31,8 +31,12 @@ log "Login en ECR ($REGISTRO)"
 aws ecr get-login-password | docker login --username AWS --password-stdin "$REGISTRO"
 
 log "Construyendo $IMAGEN"
+# --provenance=false: publica un manifiesto simple (sin attestations de BuildKit).
+# Así el escaneo básico de ECR puede analizar la imagen y la regla de ciclo de
+# vida "untagged" no borra piezas de una imagen etiquetada.
 docker build \
   --platform linux/amd64 \
+  --provenance=false \
   --build-arg APP_VERSION="$ETIQUETA" \
   --label org.opencontainers.image.revision="${GITHUB_SHA:-local}" \
   --label org.opencontainers.image.source="${GITHUB_SERVER_URL:-}/${GITHUB_REPOSITORY:-local}" \
