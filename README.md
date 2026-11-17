@@ -127,4 +127,35 @@ IPv4 públicas (~0.50 USD/día) ≈ **1.6 USD/día** mientras está desplegado.
 
 ## Demo
 
-DEMO_PENDIENTE
+**Aplicación desplegada:** http://proyecto-final-alb-1627667169.us-east-2.elb.amazonaws.com
+(disponible mientras la infraestructura no se destruya).
+
+**Evidencia:** historial de ejecuciones en la pestaña
+[Actions](https://github.com/JuanZhu3/proyecto-final-triple-pipeline-aws/actions) del repositorio.
+Primera ejecución completa (17-11-2026):
+
+| Pipeline | Resultado |
+|---|---|
+| 1 · Infraestructura | `terraform apply`: 33 recursos creados en ~4 min |
+| 2 · Construcción | pruebas OK, imágenes `frontend` y `backend` publicadas en ECR con etiqueta = SHA del commit |
+| 3 · Despliegue | ambos servicios estables en ECS, prueba de humo OK (versión verificada en `/version.json` y `/api/health`) |
+
+Un cambio posterior en el CSS del frontend recorrió de forma automática
+Pipeline 2 → Pipeline 3 y quedó en producción sin pasos manuales.
+
+### Guion sugerido para la demo en vivo (~10 min)
+
+1. **Código y arquitectura:** recorrer las carpetas y el diagrama de este README.
+2. **Pipeline 1:** en *Actions*, ejecutar *Pipeline 1* con `accion=plan` (muestra
+   "No changes", la infraestructura ya existe). En la consola de AWS mostrar la
+   VPC, el ALB con sus 2 reglas, el cluster ECS y los target groups sanos.
+3. **Pipeline 2:** hacer un cambio visible (p. ej. el subtítulo en
+   `aplicacion/frontend/src/index.html`), commit y push a `main`. Mostrar las
+   pruebas, el build y el push. En ECR mostrar la nueva etiqueta y el escaneo.
+4. **Pipeline 3:** se dispara solo. Mostrar la nueva revisión de la definición
+   de tarea, el despliegue *rolling* en ECS y la prueba de humo.
+5. **Aplicación:** recargar la URL: el cambio y la nueva versión aparecen en la
+   barra de estado; crear, completar y borrar tareas (frontend → API).
+6. **Errores y credenciales:** explicar el circuit breaker con rollback, las
+   etiquetas inmutables, los roles acotados y que la clave de CI solo existe en
+   GitHub Secrets (ver [Manejo de credenciales](#manejo-de-credenciales)).
